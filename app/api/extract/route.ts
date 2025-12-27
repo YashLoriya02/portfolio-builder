@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import PDFParser from "pdf2json";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const runtime = "nodejs";
 
 function parsePdfToText(buffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
-    // pdf2json is event-based
     const pdfParser = new (PDFParser as any)(null, 1);
 
     pdfParser.on("pdfParser_dataError", (errData: any) => {
@@ -13,14 +13,21 @@ function parsePdfToText(buffer: Buffer): Promise<string> {
     });
 
     pdfParser.on("pdfParser_dataReady", () => {
-      // Raw text with newlines in reading order
       const text = (pdfParser as any).getRawTextContent?.() || "";
       resolve(text);
     });
 
-    // ✅ Parse directly from memory (no temp files)
     pdfParser.parseBuffer(buffer);
   });
+}
+
+function cleanText(s: string) {
+  return (s || "")
+    .replace(/\r/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 type Experience = {
@@ -50,382 +57,186 @@ type Education = {
   notes: string;
 };
 
-function cleanText(s: string) {
-  return s
-    .replace(/\r/g, "\n")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function norm(s: string) {
-  return (s || "").trim();
-}
-
-function isBullet(line: string) {
-  return /^[•\-]\s+/.test(line);
-}
-
-function stripBullet(line: string) {
-  return line.replace(/^[•\-]\s+/, "").trim();
-}
-
-function findEmail(text: string) {
-  return text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? "";
-}
-
-function findPhone(text: string) {
-  // Works for +91 8879029981, etc.
-  const m = text.match(/(\+\d{1,3}\s*)?\d[\d\s-]{8,}\d/);
-  return m?.[0]?.replace(/\s+/g, " ").trim() ?? "";
-}
-
-function findLinks(text: string) {
-  const links = Array.from(text.matchAll(/(?:https?:\/\/)?(?:www\.)?[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?:\/[^\s|)]*)?/g))
-    .map((m) => m[0])
-    // basic cleanup
-    .map((l) => l.replace(/[|,]$/g, "").trim())
-    .filter((l) => l.includes("."));
-
-  const pick = (contains: string) =>
-    links.find((l) => l.toLowerCase().includes(contains)) ?? "";
-
-  const linkedin = pick("linkedin.com");
-  const github = pick("github.com");
-  const website =
-    links.find(
-      (l) =>
-        !l.toLowerCase().includes("linkedin.com") &&
-        !l.toLowerCase().includes("github.com") &&
-        !l.toLowerCase().includes("@")
-    ) ?? "";
-
-  return { linkedin, github, website, all: links };
-}
-
-function splitSections(lines: string[]) {
-  const headings = new Set([
-    "Education",
-    "Experience",
-    "Projects",
-    "Technical Skills",
-    "Positions of Responsibility",
-  ]);
-
-  const sections: Record<string, string[]> = {};
-  let current = "Header";
-  sections[current] = [];
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    if (headings.has(line)) {
-      current = line;
-      sections[current] = sections[current] ?? [];
-      continue;
-    }
-
-    sections[current].push(line);
-  }
-
-  return sections;
-}
-
-function parseEducation(block: string[]): Education[] {
-  // Pattern in your sample:
-  // Dwarkadas J. Sanghvi... Mumbai, India
-  // B.Tech ... (CGPA: 8.56) 2022 – 2026
-  // Sheth ... Mumbai, India
-  // HSC ... 2020 – 2022
-
-  const out: Education[] = [];
-  for (let i = 0; i < block.length; i++) {
-    const line = block[i];
-
-    const looksLikeSchoolLine = /India$/i.test(line) || /Mumbai/i.test(line);
-    const next = block[i + 1] ?? "";
-
-    const yearRange = next.match(/(\d{4})\s*[–-]\s*(\d{4}|Present)/i);
-
-    if (looksLikeSchoolLine && yearRange) {
-      const school = line;
-      const degreeLine = next;
-
-      out.push({
-        school,
-        degree: degreeLine.replace(/\s*\d{4}\s*[–-]\s*(\d{4}|Present)\s*$/i, "").trim(),
-        start: yearRange[1],
-        end: yearRange[2],
-        notes: "",
-      });
-
-      i++; // consumed next
-    }
-  }
-  return out;
-}
-
-function parseExperience(block: string[]): Experience[] {
-  // Pattern:
-  // SDE Intern June 2024 – Present
-  // Infiheal Remote / Mumbai
-  // • bullet...
-  // • bullet...
-  // Full Stack Developer (Freelance) May 2024 – Sept 2024
-  // Self Employed Remote
-  // • bullet...
-
-  const out: Experience[] = [];
-  let i = 0;
-
-  const dateRe = /(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*[–-]\s*(Present|(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4})/i;
-
-  while (i < block.length) {
-    const line = block[i];
-    const dateMatch = line.match(dateRe);
-
-    if (dateMatch) {
-      // role + dates are on same line
-      const role = line.replace(dateRe, "").trim();
-      const dates = line.match(dateRe)?.[0] ?? "";
-      const [start, end] = dates.split(/[–-]/).map((x) => x.trim());
-
-      const companyLine = block[i + 1] ?? "";
-      const companyParts = companyLine.split(/\s{2,}|\s+\|\s+/g); // not always needed
-      // in sample it’s "Infiheal Remote / Mumbai"
-      const company = companyLine.split(" Remote")[0]?.trim() || companyLine.split(" Remote /")[0]?.trim() || companyLine;
-      const location = companyLine.includes("Remote") ? companyLine.replace(company, "").trim() : "";
-
-      i += 2;
-
-      const highlights: string[] = [];
-      while (i < block.length && isBullet(block[i])) {
-        highlights.push(stripBullet(block[i]));
-        i++;
-      }
-
-      out.push({
-        role,
-        company: norm(company),
-        location: norm(location),
-        start: norm(start),
-        end: norm(end),
-        highlights,
-      });
-
-      continue;
-    }
-
-    i++;
-  }
-
-  return out;
-}
-
-function parseProjects(block: string[]): Project[] {
-  // Pattern:
-  // Summarizer-CLI | Node.js, LLMs, NPM Jan 2024 – Present
-  // • bullet...
-  // Video Conferencing Platform | Next.js, Stream SDK, Clerk Jan 2024
-  // • bullet...
-  //
-  // We'll treat "Jan 2024" without range as start=end.
-
-  const out: Project[] = [];
-  let i = 0;
-
-  const rangeRe = /(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*[–-]\s*(Present|(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4})/i;
-  const singleRe = /(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4}\b/i;
-
-  while (i < block.length) {
-    const line = block[i];
-
-    // header lines usually contain "|"
-    if (line.includes("|")) {
-      const left = line.split("|")[0].trim();
-      const right = line.split("|").slice(1).join("|").trim();
-
-      let start = "";
-      let end = "";
-
-      const range = right.match(rangeRe)?.[0] ?? "";
-      if (range) {
-        const [s, e] = range.split(/[–-]/).map((x) => x.trim());
-        start = s;
-        end = e;
-      } else {
-        const single = right.match(singleRe)?.[0] ?? "";
-        if (single) {
-          start = single;
-          end = single;
-        }
-      }
-
-      const techPart = right
-        .replace(rangeRe, "")
-        .replace(singleRe, "")
-        .trim();
-
-      const tech = techPart
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean);
-
-      i++;
-
-      const bullets: string[] = [];
-      while (i < block.length && isBullet(block[i])) {
-        bullets.push(stripBullet(block[i]));
-        i++;
-      }
-
-      out.push({
-        name: left,
-        link: "",
-        tech,
-        description: bullets[0] ?? "",
-        highlights: bullets.slice(1),
-        start,
-        end,
-      });
-
-      continue;
-    }
-
-    i++;
-  }
-
-  return out;
-}
-
-function parseSkills(block: string[]) {
-  // "Languages: ...", "Frameworks & Libraries: ...", etc.
-  const groups: Record<string, string[]> = {};
-
-  for (const line of block) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-
-    const key = line.slice(0, idx).trim();
-    const val = line.slice(idx + 1).trim();
-
-    const items = val.split(",").map((x) => x.trim()).filter(Boolean);
-    groups[key] = items;
-  }
-
-  // Flatten for your draft.skills UI (and keep grouped for later)
-  const flat = Object.values(groups).flat().slice(0, 40);
-
-  return { flat, groups };
-}
-
-function parseResponsibilities(block: string[]) {
-  // Pattern:
-  // Vice Chairperson (Tech) June 2024 – June 2025
-  // DJS ACM ... Mumbai
-  // • bullet
-  // Web Co-Committee Member June 2023 – June 2024
-  // DJS ACM ...
-  // • bullet
-
-  const out: Array<{
-    title: string;
-    org: string;
-    start: string;
-    end: string;
-    highlights: string[];
-  }> = [];
-
-  let i = 0;
-  const rangeRe = /(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*[–-]\s*(Present|(Jan|Feb|Mar|Apr|May|Jun|July|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{4})/i;
-
-  while (i < block.length) {
-    const line = block[i];
-    const range = line.match(rangeRe)?.[0];
-
-    if (range) {
-      const title = line.replace(rangeRe, "").trim();
-      const [start, end] = range.split(/[–-]/).map((x) => x.trim());
-      const org = block[i + 1] ?? "";
-
-      i += 2;
-      const highlights: string[] = [];
-      while (i < block.length && isBullet(block[i])) {
-        highlights.push(stripBullet(block[i]));
-        i++;
-      }
-
-      out.push({ title, org, start, end, highlights });
-      continue;
-    }
-
-    i++;
-  }
-
-  return out;
-}
-
-function buildDraft(text: string) {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const sections = splitSections(lines);
-
-  const header = sections["Header"] ?? [];
-  const fullName = header[0] ?? "Your Name";
-
-  const email = findEmail(text);
-  const phone = findPhone(text);
-  const { linkedin, github, website } = findLinks(text);
-
-  const education = parseEducation(sections["Education"] ?? []);
-  const experience = parseExperience(sections["Experience"] ?? []);
-  const projects = parseProjects(sections["Projects"] ?? []);
-  const { flat: skillsFlat } = parseSkills(sections["Technical Skills"] ?? []);
-  const responsibilities = parseResponsibilities(sections["Positions of Responsibility"] ?? []);
-
+type Responsibility = {
+  title: string;
+  org: string;
+  start: string;
+  end: string;
+  highlights: string[];
+};
+
+type ExtractedAll = {
+  profile: {
+    fullName: string;
+    headline: string;
+    location: string;
+    email: string;
+    phone: string;
+    website: string;
+    github: string;
+    linkedin: string;
+    summary: string;
+  };
+  skills: string[];
+  education: Education[];
+  experience: Experience[];
+  projects: Project[];
+  responsibilities: Responsibility[];
+};
+
+function emptyAll(): ExtractedAll {
   return {
     profile: {
-      fullName,
+      fullName: "",
       headline: "",
       location: "",
-      email,
-      phone,
-      website,
-      github,
-      linkedin,
+      email: "",
+      phone: "",
+      website: "",
+      github: "",
+      linkedin: "",
       summary: "",
     },
-    skills: skillsFlat,
-    education,
-    experience,
-    projects,
-    responsibilities,
-    _rawText: text, // keep for debugging in UI
+    skills: [],
+    education: [],
+    experience: [],
+    projects: [],
+    responsibilities: [],
   };
 }
 
-export async function POST(req: Request) {
-  const ct = req.headers.get("content-type") || "";
-  if (!ct.includes("multipart/form-data")) {
-    return NextResponse.json({ error: "Send multipart/form-data with field 'file' (PDF)" }, { status: 415 });
+function safeJsonParse(s: string): any | null {
+  const t = (s || "").trim();
+  if (!t) return null;
+
+  // ideal case: pure JSON
+  try {
+    return JSON.parse(t);
+  } catch { }
+
+  // fallback: extract first JSON object
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    try {
+      return JSON.parse(t.slice(start, end + 1));
+    } catch { }
   }
+  return null;
+}
 
-  const form = await req.formData();
-  const file = form.get("file") as File | null;
+function normalizeAllShape(parsed: any): ExtractedAll {
+  const fallback = emptyAll();
 
-  if (!file) return NextResponse.json({ error: "No file uploaded. Field name must be 'file'." }, { status: 400 });
-  if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
-    return NextResponse.json({ error: "Please upload a PDF." }, { status: 400 });
-  }
+  return {
+    profile: { ...fallback.profile, ...(parsed?.profile ?? {}) },
+    skills: Array.isArray(parsed?.skills) ? parsed.skills : [],
+    education: Array.isArray(parsed?.education) ? parsed.education : [],
+    experience: Array.isArray(parsed?.experience) ? parsed.experience : [],
+    projects: Array.isArray(parsed?.projects) ? parsed.projects : [],
+    responsibilities: Array.isArray(parsed?.responsibilities)
+      ? parsed.responsibilities
+      : [],
+  };
+}
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+async function geminiExtract(resumeText: string): Promise<ExtractedAll> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
 
-  const raw = await parsePdfToText(buffer);
-  const text = cleanText(raw);
+  const genAI = new GoogleGenerativeAI(apiKey);
 
-  return NextResponse.json({
-    ok: true,
-    filename: file.name,
-    text,
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 4096,
+      responseMimeType: "application/json",
+    },
   });
+
+  const prompt = `
+You extract structured resume data.
+
+Return ONLY valid JSON. No markdown, no explanation.
+If missing: use "" for strings and [] for arrays. Do NOT guess.
+
+Output MUST match exactly:
+
+{
+  "profile": {"fullName":"","headline":"","location":"","email":"","phone":"","website":"","github":"","linkedin":"","summary":""},
+  "skills": [],
+  "education": [{"school":"","degree":"","start":"","end":"","notes":""}],
+  "experience": [{"company":"","role":"","location":"","start":"","end":"","highlights":[]}],
+  "projects": [{"name":"","link":"","tech":[],"description":"","highlights":[],"start":"","end":""}],
+  "responsibilities": [{"title":"","org":"","start":"","end":"","highlights":[]}]
+}
+
+Rules:
+- Use exact values from resume text (light whitespace normalization ok).
+- skills: flat list, dedupe, max 60.
+- highlights: concise bullets (no leading bullet chars).
+- dates: keep as seen (e.g., "June 2024", "2022", "Present").
+- projects.description: 1-line summary; if not explicitly present, "".
+- link fields: only if present in resume text else "".
+- If a section doesn't exist, return empty array for it.
+
+Resume text:
+"""${resumeText}"""
+`.trim();
+
+  const result = await model.generateContent(prompt);
+  const out = result.response.text() || "";
+
+  const parsed = safeJsonParse(out);
+  if (!parsed) return emptyAll();
+
+  return normalizeAllShape(parsed);
+}
+
+export async function POST(req: Request) {
+  try {
+    const ct = req.headers.get("content-type") || "";
+
+    if (ct.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const file = form.get("file") as File | null;
+
+      if (!file) {
+        return NextResponse.json(
+          { error: "No file uploaded. Field name must be 'file'." },
+          { status: 400 }
+        );
+      }
+      if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
+        return NextResponse.json({ error: "Please upload a PDF." }, { status: 400 });
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const raw = await parsePdfToText(buffer);
+      const text = cleanText(raw);
+
+      // If pdf text extraction fails, still ask Gemini with whatever we have
+      const all = await geminiExtract(text);
+
+      return NextResponse.json({ ok: true, filename: file.name, text, all });
+    }
+
+    if (ct.includes("application/json")) {
+      const body = await req.json().catch(() => ({}));
+      const text = cleanText(body?.text || "");
+      const all = await geminiExtract(text);
+      return NextResponse.json({ ok: true, filename: "", text, all });
+    }
+
+    return NextResponse.json(
+      { error: "Send multipart/form-data with field 'file' (PDF) OR JSON { text }" },
+      { status: 415 }
+    );
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "Extraction failed" },
+      { status: 500 }
+    );
+  }
 }

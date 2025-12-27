@@ -2,7 +2,7 @@ export type TemplateId = "minimal" | "glass" | "neo" | "classic";
 
 export type PortfolioDraft = {
     updatedAt: number;
-    responsibilities: string,
+    responsibilities: Array<string>,
     templateId: TemplateId;
     profile: {
         fullName: string;
@@ -44,7 +44,7 @@ export const DRAFT_KEY = "pb_draft_v1";
 
 export const defaultDraft: PortfolioDraft = {
     updatedAt: Date.now(),
-    responsibilities: "",
+    responsibilities: [],
     templateId: "glass",
     profile: {
         fullName: "",
@@ -76,6 +76,7 @@ export function loadDraft(): PortfolioDraft {
 }
 
 export function saveDraft(draft: PortfolioDraft) {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, updatedAt: Date.now() }));
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, updatedAt: Date.now() }));
+  window.dispatchEvent(new Event("pb_draft_updated"));
 }

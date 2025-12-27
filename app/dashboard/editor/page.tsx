@@ -5,6 +5,90 @@ import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import type { PortfolioDraft } from "@/lib/draft";
 import LivePreview from "@/components/preview/LivePreview";
 
+function normalizeArray<T>(v: any): T[] {
+    return Array.isArray(v) ? v : [];
+}
+
+function normalizeString(v: any) {
+    return typeof v === "string" ? v : "";
+}
+
+function ensureHighlights(list: any): string[] {
+    const arr = normalizeArray<string>(list).map(normalizeString).filter(Boolean);
+    return arr.length ? arr : [""];
+}
+
+function mapApiToDraftPatch(api: any): Partial<PortfolioDraft> {
+    // supports both: { all: {...} } OR direct payload {...}
+    const src = api?.all ?? api ?? {};
+    const profile = src.profile ?? {};
+
+    return {
+        profile: {
+            fullName: normalizeString(profile.fullName),
+            headline: normalizeString(profile.headline),
+            location: normalizeString(profile.location),
+            email: normalizeString(profile.email),
+            phone: normalizeString(profile.phone),
+            website: normalizeString(profile.website),
+            github: normalizeString(profile.github),
+            linkedin: normalizeString(profile.linkedin),
+            summary: normalizeString(profile.summary),
+        },
+
+        skills: normalizeArray<string>(src.skills).map(normalizeString).filter(Boolean),
+
+        experience: normalizeArray<any>(src.experience).map((e) => ({
+            company: normalizeString(e.company),
+            role: normalizeString(e.role),
+            start: normalizeString(e.start),
+            end: normalizeString(e.end),
+            location: normalizeString(e.location) || undefined,
+            highlights: ensureHighlights(e.highlights),
+        })),
+
+        projects: normalizeArray<any>(src.projects).map((p) => ({
+            name: normalizeString(p.name),
+            link: normalizeString(p.link),
+            tech: normalizeArray<string>(p.tech).map(normalizeString).filter(Boolean),
+            description: normalizeString(p.description),
+            highlights: ensureHighlights(p.highlights),
+        })),
+
+        education: normalizeArray<any>(src.education).map((ed) => ({
+            school: normalizeString(ed.school),
+            degree: normalizeString(ed.degree),
+            start: normalizeString(ed.start),
+            end: normalizeString(ed.end),
+            notes: normalizeString(ed.notes) || undefined,
+        })),
+
+        // OPTIONAL: if your API provides responsibilities as array of objects or strings
+        // we'll store it as a single string in draft.responsibilities
+        responsibilities: Array.isArray(src.responsibilities)
+            ? src.responsibilities
+                .map((r: any) => normalizeString(r?.title || r?.org || r))
+                .filter(Boolean)
+                .join("\n")
+            : normalizeString(src.responsibilities),
+    };
+}
+
+function applyDraftPatch(prev: PortfolioDraft, patch: Partial<PortfolioDraft>): PortfolioDraft {
+    return {
+        ...prev,
+        ...patch,
+        profile: { ...prev.profile, ...(patch.profile ?? {}) },
+        // For lists: prefer patch if provided (even empty), else keep prev
+        skills: patch.skills ?? prev.skills,
+        experience: patch.experience ?? prev.experience,
+        projects: patch.projects ?? prev.projects,
+        education: patch.education ?? prev.education,
+        responsibilities: patch.responsibilities ?? prev.responsibilities,
+    };
+}
+
+
 function SaveBadge({ state }: { state: "idle" | "saving" | "saved" | "error" }) {
     const map: Record<typeof state, { text: string; dot: string }> = {
         idle: { text: "All changes saved", dot: "bg-emerald-400" },
@@ -129,16 +213,10 @@ export default function EditorPage() {
             });
 
             if (!res.ok) throw new Error("extract failed");
-            const extracted = await res.json();
+            const data = await res.json();
 
-            setDraftSafe((prev) => ({
-                ...prev,
-                profile: { ...prev.profile, ...extracted.profile },
-                skills: extracted.skills ?? prev.skills,
-                experience: extracted.experience ?? prev.experience,
-                projects: extracted.projects ?? prev.projects,
-                education: extracted.education ?? prev.education,
-            }));
+            const patch = mapApiToDraftPatch(data);
+            setDraftSafe((prev) => applyDraftPatch(prev, patch));
         } finally {
             setExtracting(false);
         }
@@ -175,7 +253,7 @@ export default function EditorPage() {
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-4">
             {/* LEFT: Editor */}
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                <div className="flex flex-col  gap-3">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Editor</h1>
                         <p className="mt-1 text-sm text-white/60">
@@ -188,6 +266,16 @@ export default function EditorPage() {
                         <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
                             Completion: <span className="text-white">{completion}%</span>
                         </div>
+
+                        <a
+                            href="/preview"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-xl bg-white/15 px-3 py-2 text-xs hover:bg-white/20 transition"
+                        >
+                            Open Portfolio
+                        </a>
+
                     </div>
                 </div>
 
@@ -234,21 +322,16 @@ export default function EditorPage() {
 
                                 if (!res.ok) throw new Error(data?.error || "Extract failed");
 
-                                // show in textarea (debug)
                                 setResumeText(data.text || "");
+
+                                const patch = mapApiToDraftPatch(data);
+                                setDraftSafe((prev) => applyDraftPatch(prev, patch));
+
                             } finally {
                                 setExtracting(false);
                                 e.target.value = "";
                             }
                         }}
-                    />
-
-                    <Textarea
-                        label="Paste resume text"
-                        value={resumeText}
-                        onChange={setResumeText}
-                        placeholder="Paste resume content here…"
-                        rows={6}
                     />
                 </SectionCard>
 
@@ -274,6 +357,17 @@ export default function EditorPage() {
                             label="Email"
                             value={draft.profile.email}
                             onChange={(v) => setDraftSafe((p) => ({ ...p, profile: { ...p.profile, email: v } }))}
+                        />
+                        <Input
+                            label="Phone"
+                            value={draft.profile.phone}
+                            onChange={(v) => setDraftSafe((p) => ({ ...p, profile: { ...p.profile, phone: v } }))}
+                        />
+
+                        <Input
+                            label="Website"
+                            value={draft.profile.website}
+                            onChange={(v) => setDraftSafe((p) => ({ ...p, profile: { ...p.profile, website: v } }))}
                         />
                         <Input
                             label="GitHub"

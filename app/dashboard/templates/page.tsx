@@ -53,22 +53,21 @@ function TemplateThumb({
     draft,
     templateId,
 }: {
-    draft: any; // you can type this as PortfolioDraft if you want
+    draft: any;
     templateId: TemplateId;
 }) {
-    // control thumbnail scale here
     const scale = 0.38;
 
     return (
         <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 overflow-hidden">
-            <div className="h-45 relative">
+            <div className="h-52 relative">
                 <div className="absolute inset-0 bg-linear-to-b from-white/6 to-transparent" />
 
                 <div
-                    className="absolute left-3 top-3 origin-top-left pointer-events-none select-none"
+                    className="absolute rounded-2xl border p-2 border-white top-3 left-3 origin-top-left pointer-events-none select-none"
                     style={{ transform: `scale(${scale})` }}
                 >
-                    <div className="w-190">
+                    <div className="w-200">
                         <TemplatePreview draft={{ ...draft, templateId }} />
                     </div>
                 </div>
