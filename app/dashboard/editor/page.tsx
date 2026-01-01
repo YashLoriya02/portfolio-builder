@@ -6,6 +6,7 @@ import type { PortfolioDraft } from "@/lib/draft";
 import LivePreview from "@/components/preview/LivePreview";
 import Link from "next/link";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
+import { Loader } from "lucide-react";
 
 function normalizeArray<T>(v: any): T[] {
     return Array.isArray(v) ? v : [];
@@ -300,26 +301,25 @@ export default function EditorPage() {
                     </div>
                 </div>
 
-                {/* Resume ingest */}
                 <SectionCard
                     title="Resume"
                     subtitle="Paste resume text or upload a file. Click Extract to auto-fill sections."
                     right={
-                        <div className="flex gap-2">
+                        <div className="flex gap-4">
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition"
+                                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-base hover:bg-white/10 transition"
                             >
-                                Upload
+                                Upload Resume
                             </button>
 
                             <button
                                 disabled={!resumeText.trim() || extracting}
                                 onClick={() => extractFromAPI(resumeText)}
-                                className="rounded-xl bg-white text-black px-3 py-2 text-sm font-medium hover:opacity-90 transition
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="rounded-xl flex justify-center items-center gap-3 bg-white text-black px-3 py-2 text-base font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {extracting ? "Extracting…" : "Extract → Fill"}
+                                {extracting ? "Extracting Data Please wait..." : "Extract → Fill"}
+                                {extracting && <Loader className="animate-spin h-5 w-5" />}
                             </button>
                         </div>
                     }

@@ -81,14 +81,12 @@ export function TemplateMinimal({ draft }: { draft: PortfolioDraft }) {
                     ) : null}
                 </div>
 
-                {/* Summary */}
-                <div className="mt-8 max-w-3xl">
+                <div className="mt-8 max-w-full">
                     <p className="text-base leading-relaxed text-white/75">
                         {p.summary || "Add a short summary to introduce yourself."}
                     </p>
                 </div>
 
-                {/* Sticky nav */}
                 {nav.length ? (
                     <div className="mt-10 sticky top-4 z-10">
                         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur px-4 py-3">

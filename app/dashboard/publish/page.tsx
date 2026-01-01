@@ -4,9 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
 
-/** -----------------------------
- * Small UI primitives (match your dark UI)
- * ----------------------------- */
+type UiError = {
+    title: string;
+    message: string;
+    code?: string | number;
+    hint?: string;
+    actions?: { label: string; onClick?: () => void; href?: string }[];
+    debug?: any;
+};
+
 function SectionCard({
     title,
     subtitle,
@@ -145,8 +151,7 @@ export default function PublishPage() {
     const [repoName, setRepoName] = useState(defaultRepoName);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
-    const [error, setError] = useState("");
-
+    const [error, setError] = useState<UiError | null>(null);
     const [step, setStep] = useState(0);
     const stepTimer = useRef<number | null>(null);
 
@@ -158,6 +163,27 @@ export default function PublishPage() {
         if (stepTimer.current) {
             window.clearInterval(stepTimer.current);
             stepTimer.current = null;
+        }
+    }
+
+    function normalizePublishError(apiError: any) {
+        console.log("API Error: ", apiError)
+
+        if (apiError?.includes("Name already exists") || apiError?.includes("GitHub API 422")) {
+            return {
+                title: "Repository name already exists",
+                message: `You already have a GitHub repository named "${repoName}".`,
+                code: 422,
+                actions: [],
+            };
+        }
+
+        else {
+            return {
+                title: "Publish failed",
+                message:
+                    "We couldn't create your GitHub repository. Please try again or choose a different name.", 
+            };
         }
     }
 
@@ -189,7 +215,7 @@ export default function PublishPage() {
 
     async function publish() {
         setLoading(true);
-        setError("");
+        setError(null);
         setResult(null);
 
         startStepper();
@@ -207,11 +233,11 @@ export default function PublishPage() {
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.error || "Publish failed");
 
-            // mark done
             setStep(LOADER_STEPS.length - 1);
             setResult(data);
         } catch (e: any) {
-            setError(e?.message || "Failed");
+            const uiErr = normalizePublishError(e.toString());
+            setError(uiErr);
         } finally {
             stopStepper();
             setLoading(false);
@@ -222,7 +248,6 @@ export default function PublishPage() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Publish</h1>
@@ -293,61 +318,198 @@ export default function PublishPage() {
                         ) : null}
 
                         {error ? (
-                            <div className="mt-4 rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4 text-sm text-rose-200">
-                                {error}
+                            <div className="mt-4 rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <div className="text-sm font-semibold text-rose-200">{error.title}</div>
+                                        <div className="mt-1 text-sm text-rose-200/80">{error.message}</div>
+                                        {error.hint ? (
+                                            <div className="mt-2 text-xs text-rose-200/70">{error.hint}</div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="text-xs text-rose-200/60">
+                                        {error.code ? `Error ${error.code}` : null}
+                                    </div>
+                                </div>
+
+                                {error.actions?.length ? (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {error.actions.map((a, i) =>
+                                            a.href ? (
+                                                <a
+                                                    key={i}
+                                                    href={a.href}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 transition"
+                                                >
+                                                    {a.label}
+                                                </a>
+                                            ) : (
+                                                <button
+                                                    key={i}
+                                                    onClick={a.onClick}
+                                                    className="rounded-xl bg-white text-black px-3 py-2 text-xs font-medium hover:opacity-90 transition"
+                                                >
+                                                    {a.label}
+                                                </button>
+                                            )
+                                        )}
+                                        <button
+                                            onClick={publish}
+                                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 transition"
+                                        >
+                                            Try again
+                                        </button>
+                                    </div>
+                                ) : null}
                             </div>
                         ) : null}
+
                     </SectionCard>
 
-                    {/* Result */}
                     {result?.ok ? (
-                        <SectionCard title="Success 🎉" subtitle="Your repository is ready. Next: deploy on Vercel.">
-                            <div className="space-y-3 text-sm">
+                        <SectionCard
+                            title="Success 🎉 Next steps (2 minutes)"
+                            subtitle="Your repository is ready. Follow this checklist to get your live portfolio link."
+                        >
+                            <div className="rounded-2xl mb-4 border border-white/10 bg-black/30 p-4">
+                                <div className="text-xs text-white/60 mb-2">GitHub Repository</div>
+                                <a
+                                    className="underline text-white/90 hover:text-white"
+                                    href={result.repo.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    {result.repo.url}
+                                </a>
+                            </div>
+
+                            <div className="flex px-6 justify-center mb-4 flex-col md:flex-row gap-2">
+                                <a
+                                    href={result.repo.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-2 text-sm hover:bg-white/10 transition text-center"
+                                >
+                                    Open Repo
+                                </a>
+
+                                <a
+                                    href={result.deploy.vercel}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full rounded-xl bg-white/90 text-black px-6 py-2 text-sm font-medium hover:opacity-90 transition text-center"
+                                >
+                                    Deploy to Vercel
+                                </a>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                                    <div className="text-xs text-white/60 mb-2">GitHub Repository</div>
-                                    <a
-                                        className="underline text-white/90 hover:text-white"
-                                        href={result.repo.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        {result.repo.url}
-                                    </a>
+                                    <div className="text-xs text-white/60 mb-3">Checklist</div>
+
+                                    <div className="space-y-3 text-sm text-white/80">
+                                        <div className="flex gap-3">
+                                            <span className="mt-0.5 h-5 w-5 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-xs">1</span>
+                                            <div>
+                                                <div className="font-medium">Open your GitHub repo</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Confirm your content exists in <span className="font-mono">data/draft.json</span>.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <span className="mt-0.5 h-5 w-5 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-xs">2</span>
+                                            <div>
+                                                <div className="font-medium">Deploy to Vercel</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Click <span className="text-white/80">Deploy to Vercel</span>. Vercel will auto-import the repo and give you a live URL.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <span className="mt-0.5 h-5 w-5 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-xs">3</span>
+                                            <div>
+                                                <div className="font-medium">Share your live link</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Your portfolio becomes public at the Vercel URL. You can add a custom domain anytime.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <span className="mt-0.5 h-5 w-5 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-xs">4</span>
+                                            <div>
+                                                <div className="font-medium">Edit later (no need to rebuild)</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Update <span className="font-mono">data/draft.json</span> in GitHub → redeploy on Vercel (often automatic).
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="flex flex-col md:flex-row gap-2">
-                                    <a
-                                        href={result.repo.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition text-center"
-                                    >
-                                        Open Repo
-                                    </a>
+                                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                                    <div className="text-xs text-white/60 mb-3">What we created</div>
 
-                                    <a
-                                        href={result.deploy.vercel}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex-1 rounded-xl bg-white text-black px-4 py-2 text-sm font-medium hover:opacity-90 transition text-center"
-                                    >
-                                        Deploy to Vercel
-                                    </a>
+                                    <div className="space-y-3 text-sm text-white/80">
+                                        <div className="flex items-start gap-2">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 mt-2" />
+                                            <div>
+                                                <div className="font-medium">Public GitHub repository</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Your portfolio code + template is stored here.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-2">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 mt-2" />
+                                            <div>
+                                                <div className="font-medium">
+                                                    Content file: <span className="font-mono text-white/90">data/draft.json</span>
+                                                </div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    This is where your resume + edits are saved. Edit this to update your portfolio quickly.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-2">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-white/60 mt-2" />
+                                            <div>
+                                                <div className="font-medium">Deploy-ready setup</div>
+                                                <div className="text-xs text-white/55 mt-1">
+                                                    Vercel can import this repo and deploy with minimal configuration.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
 
-                                <div className="text-xs text-white/55">
-                                    Want to edit later? Update <span className="font-mono">data/draft.json</span> in your repo and redeploy.
+                            {/* FAQ */}
+                            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                                <div className="text-xs text-white/60 mb-2">Troubleshooting</div>
+                                <div className="space-y-2 text-xs text-white/70">
+                                    <div>• Repo name already exists? Choose a different repository name and publish again.</div>
+                                    <div>• Deploy fails on Vercel? Make sure GitHub access is granted and try re-importing the repo in Vercel.</div>
+                                    <div>• Looks empty? Add 1–2 Projects/Experience in Editor and republish or update <span className="font-mono">data/draft.json</span>.</div>
                                 </div>
                             </div>
                         </SectionCard>
                     ) : null}
+
                 </div>
 
-                {/* Right: interactive loader / preview */}
                 <div className="space-y-4">
                     <SectionCard
                         title="Publishing Status"
-                        subtitle="We’ll show progress here while we work."
+                        subtitle="Progress will be shown here while we work."
                     >
                         {loading ? (
                             <PublishProgress activeIndex={step} title={active.t} desc={active.d} />
