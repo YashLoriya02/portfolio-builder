@@ -135,7 +135,7 @@ so anyone, regardless of technical background, can showcase their work professio
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 ![Home](public/images/home.png)
 
