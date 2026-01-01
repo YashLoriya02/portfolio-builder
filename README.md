@@ -132,3 +132,17 @@ Contributions are welcome!
 
 Portfolio Builder aims to **democratize personal branding** —
 so anyone, regardless of technical background, can showcase their work professionally.
+
+---
+
+## 📸 Screenshots
+
+![Home](public/images/home.png)
+
+![Dashboard](public/images/dashboard.png)
+
+![Templates](public/images/template.png)
+
+![Editor](public/images/editor.png)
+
+![Publish](public/images/publish.png)
