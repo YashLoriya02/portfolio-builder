@@ -10,7 +10,7 @@ const nav = [
     { href: "/dashboard", label: "Overview" },
     { href: "/dashboard/editor", label: "Editor" },
     { href: "/dashboard/templates", label: "Templates" },
-    // { href: "/dashboard/publish", label: "Publish" },
+    { href: "/dashboard/publish", label: "Publish" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen grid grid-cols-[280px_1fr] bg-black text-white">
             <aside className="border-r border-white/10 p-4">
                 <div className="flex items-center justify-between">
-                    <div className="font-semibold tracking-tight">Portfolio Builder</div>
+                    <Link href={"/"} className="font-semibold tracking-tight">Portfolio Builder</Link>
                 </div>
 
                 <div className="relative mt-6">
@@ -60,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </nav>
                 </div>
 
-                <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="mt-8 fixed bottom-5 w-60 rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="text-sm font-medium">Quick tip</div>
                     <div className="mt-1 text-xs opacity-70">
                         Start with your resume → we'll auto-fill sections.

@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import type { TemplateId } from "@/lib/draft";
 import TemplatePreview from "@/components/preview/TemplatePreview";
+import Link from "next/link";
+import { useDynamicTitle } from "@/hooks/useDynamicTitle";
 
 const templates: Array<{
     id: TemplateId;
@@ -80,7 +82,9 @@ function TemplateThumb({
 
 
 export default function TemplatesPage() {
-    const { draft, setDraftSafe } = useDraftAutosave();
+    const { draft, setDraftSafe, clearDraftSafe } = useDraftAutosave();
+    useDynamicTitle(draft.profile.fullName);
+
     const [preview, setPreview] = useState<TemplateId | null>(null);
 
     const selected = draft.templateId;
@@ -89,11 +93,29 @@ export default function TemplatesPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Templates</h1>
-                <p className="mt-1 text-sm text-white/60">
-                    Pick a style. You can switch anytime — content stays.
-                </p>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">Templates</h1>
+                    <p className="mt-1 text-sm text-white/60">
+                        Pick a style. You can switch anytime — content stays.
+                    </p>
+                </div>
+
+                <div className="flex gap-3">
+                    <Link
+                        href="/dashboard/publish"
+                        className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm hover:bg-white/10 transition"
+                    >
+                        Publish Now
+                    </Link>
+
+                    <button
+                        onClick={clearDraftSafe}
+                        className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm hover:bg-white/10 transition"
+                    >
+                        Clear All
+                    </button>
+                </div>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/4 p-6">

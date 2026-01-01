@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadDraft, PortfolioDraft, saveDraft } from "@/lib/draft";
+import { defaultDraft, loadDraft, PortfolioDraft, saveDraft } from "@/lib/draft";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -52,5 +52,9 @@ export function useDraftAutosave() {
         });
     }
 
-    return { draft, setDraftSafe, saveState };
+    function clearDraftSafe() {
+        setDraft(defaultDraft);
+    }
+
+    return { draft, setDraftSafe, saveState, clearDraftSafe };
 }

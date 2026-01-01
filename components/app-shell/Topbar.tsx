@@ -12,6 +12,8 @@ export default function Topbar() {
     const { data } = useSession();
     const first = getFirstName(data?.user?.name);
 
+    console.log(data?.user)
+
     return (
         <div className="sticky top-0 z-20 backdrop-blur-xl bg-black/40 border-b border-white/10">
             <div className="flex items-center justify-between px-6 py-4">
@@ -29,7 +31,7 @@ export default function Topbar() {
                     </div>
 
                     <button
-                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        onClick={() => signOut({ callbackUrl: "/" })}
                         className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm
                        hover:bg-white/10 transition active:scale-[0.99]"
                     >
@@ -37,7 +39,6 @@ export default function Topbar() {
                     </button>
 
                     <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={data?.user?.image ?? "https://avatars.githubusercontent.com/u/583231?v=4"}
                             alt="avatar"

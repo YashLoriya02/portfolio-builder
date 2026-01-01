@@ -1,6 +1,6 @@
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['pdf2json'],
+    serverExternalPackages: ['pdf2json'],
   },
 };
 

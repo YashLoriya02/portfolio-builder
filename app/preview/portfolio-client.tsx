@@ -42,7 +42,7 @@ export default function PortfolioClient() {
     if (!draft) {
         return (
             <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <div className="text-white/70 text-sm">Loading portfolio...</div>
+                <div className="text-white/70 tracking-wider animate-pulse text-4xl">Loading Portfolio...</div>
             </div>
         );
     }
