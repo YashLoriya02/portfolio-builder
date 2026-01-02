@@ -11,6 +11,7 @@ const nav = [
     { href: "/dashboard/editor", label: "Editor" },
     { href: "/dashboard/templates", label: "Templates" },
     { href: "/dashboard/publish", label: "Publish" },
+    { href: "/dashboard/published", label: "Published" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

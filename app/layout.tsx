@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/components/providers/Providers";
@@ -51,6 +52,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-black text-white">
         <Providers>{children}</Providers>
+        <Toaster
+          position="bottom-right"
+          richColors
+          toastOptions={{
+            className: "bg-black/90 border border-white/10 text-white",
+          }}
+        />
       </body>
     </html>
   );
