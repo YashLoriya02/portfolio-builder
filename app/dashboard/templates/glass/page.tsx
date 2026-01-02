@@ -35,14 +35,14 @@ function Section({
 }
 
 export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
-    const p = draft.profile;
+    const p = draft?.profile;
 
     const links: LinkItem[] = [
-        p.website ? { label: "Website", href: p.website } : null,
-        p.github ? { label: "GitHub", href: p.github } : null,
-        p.linkedin ? { label: "LinkedIn", href: p.linkedin } : null,
-        p.email ? { label: "Email", href: `mailto:${p.email}` } : null,
-        p.phone ? { label: "Call", href: `tel:${p.phone.replace(/\s+/g, "")}` } : null,
+        p?.website ? { label: "Website", href: p?.website } : null,
+        p?.github ? { label: "GitHub", href: p?.github } : null,
+        p?.linkedin ? { label: "LinkedIn", href: p?.linkedin } : null,
+        p?.email ? { label: "Email", href: `mailto:${p?.email}` } : null,
+        p?.phone ? { label: "Call", href: `tel:${p?.phone.replace(/\s+/g, "")}` } : null,
     ].filter(Boolean) as LinkItem[];
 
     return (
@@ -57,24 +57,24 @@ export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
                 {/* HERO */}
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
                     <div className="text-4xl font-semibold tracking-tight">
-                        {p.fullName || "Your Name"}
+                        {p?.fullName || "Your Name"}
                     </div>
 
-                    {p.headline ? (
-                        <div className="mt-2 text-white/70">{p.headline}</div>
+                    {p?.headline ? (
+                        <div className="mt-2 text-white/70">{p?.headline}</div>
                     ) : null}
 
-                    {(p.location || p.email) ? (
+                    {(p?.location || p?.email) ? (
                         <div className="mt-3 text-sm text-white/60">
-                            {p.location ? <span>{p.location}</span> : null}
-                            {p.location && p.email ? <span className="mx-2">•</span> : null}
-                            {p.email ? <span>{p.email}</span> : null}
+                            {p?.location ? <span>{p?.location}</span> : null}
+                            {p?.location && p?.email ? <span className="mx-2">•</span> : null}
+                            {p?.email ? <span>{p?.email}</span> : null}
                         </div>
                     ) : null}
 
-                    {p.summary ? (
+                    {p?.summary ? (
                         <p className="mt-5 max-w-2xl text-white/70 leading-relaxed">
-                            {p.summary}
+                            {p?.summary}
                         </p>
                     ) : (
                         <p className="mt-5 max-w-2xl text-white/50 leading-relaxed">
@@ -94,10 +94,10 @@ export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
                 </div>
 
                 {/* PROJECTS */}
-                {draft.projects.length ? (
+                {draft?.projects.length ? (
                     <Section title="Projects">
                         <div className="grid gap-4 md:grid-cols-2">
-                            {draft.projects.map((pr, i) => (
+                            {draft?.projects.map((pr, i) => (
                                 <div
                                     key={`${pr.name}-${i}`}
                                     className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
@@ -147,10 +147,10 @@ export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
                 ) : null}
 
                 {/* EXPERIENCE */}
-                {draft.experience.length ? (
+                {draft?.experience.length ? (
                     <Section title="Experience">
                         <div className="space-y-4">
-                            {draft.experience.map((ex, i) => (
+                            {draft?.experience.map((ex, i) => (
                                 <div
                                     key={`${ex.company}-${ex.role}-${i}`}
                                     className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
@@ -182,10 +182,10 @@ export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
                 ) : null}
 
                 {/* SKILLS */}
-                {draft.skills.length ? (
+                {draft?.skills.length ? (
                     <Section title="Skills">
                         <div className="flex flex-wrap gap-2">
-                            {draft.skills.slice(0, 60).map((s) => (
+                            {draft?.skills.slice(0, 60).map((s) => (
                                 <span
                                     key={s}
                                     className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70"
@@ -198,10 +198,10 @@ export default function GlassTemplate({ draft }: { draft: PortfolioDraft }) {
                 ) : null}
 
                 {/* EDUCATION */}
-                {draft.education.length ? (
+                {draft?.education.length ? (
                     <Section title="Education">
                         <div className="grid gap-4 md:grid-cols-2">
-                            {draft.education.map((ed, i) => (
+                            {draft?.education.map((ed, i) => (
                                 <div
                                     key={`${ed.school}-${i}`}
                                     className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
