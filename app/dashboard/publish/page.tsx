@@ -6,6 +6,7 @@ import { useDynamicTitle } from "@/hooks/useDynamicTitle";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
 
 const STORAGE_KEY = "portfolio_builder:published_projects:v1";
 
@@ -325,6 +326,17 @@ export default function PublishPage() {
                     setDeployState((s) => ({ ...s, phase: "ready" }));
 
                     toast.success("Portfolio is live 🎉");
+
+
+                    await fetch("/api/notify", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            projectName: projectNameRef.current,
+                            liveUrl: json.url,
+                            type: "vercel",
+                        }),
+                    });
                 }
 
                 if (json.state === "ERROR") {
@@ -541,6 +553,19 @@ export default function PublishPage() {
 
             setStep(LOADER_STEPS.length - 1);
             setResult(data);
+
+            stopStepper();
+            setLoading(false);
+
+            await fetch("/api/notify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    repoName,
+                    repoUrl: data.repo.url,
+                    type: "github",
+                }),
+            });
         } catch (e: any) {
             const uiErr = normalizePublishError(e.toString());
             setError(uiErr);
@@ -890,7 +915,6 @@ export default function PublishPage() {
                                                 </button>
                                                 <Link
                                                     href={"/dashboard/published"}
-                                                    onClick={() => copyToClipboard(deployState.url)}
                                                     className="w-full flex justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
                                                 >
                                                     Published Portfolios
