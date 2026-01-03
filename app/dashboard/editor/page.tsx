@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import type { PortfolioDraft } from "@/lib/draft";
-import LivePreview from "@/components/preview/LivePreview";
 import Link from "next/link";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
 import { Loader } from "lucide-react";
@@ -109,19 +108,21 @@ function SaveBadge({ state }: { state: "idle" | "saving" | "saved" | "error" }) 
 }
 
 function SectionCard({
+    isResume,
     title,
     subtitle,
     children,
     right,
 }: {
+    isResume?: Boolean;
     title: string;
     subtitle?: string;
     right?: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
-        <div className="rounded-3xl border border-white/10 bg-white/4 p-6">
-            <div className="flex items-start justify-between gap-4">
+        <div className={`rounded-3xl border border-white/10 bg-white/4 p-6`}>
+            <div className={`flex items-start justify-between gap-4 ${isResume ? "flex-col md:flex-row" : ""}`}>
                 <div>
                     <div className="text-lg font-semibold">{title}</div>
                     {subtitle ? <div className="mt-1 text-sm text-white/60">{subtitle}</div> : null}
@@ -189,13 +190,13 @@ function Textarea({
 
 export default function EditorPage() {
     const { draft, setDraftSafe, saveState, clearDraftSafe } = useDraftAutosave();
-    
+
     const [resumeText, setResumeText] = useState("");
     const [extracting, setExtracting] = useState(false);
     const fileRef = useRef<HTMLInputElement | null>(null);
-    
+
     useDynamicTitle(draft.profile.fullName);
-    
+
     const completion = useMemo(() => {
         let score = 0;
         const p = draft.profile;
@@ -258,7 +259,7 @@ export default function EditorPage() {
     return (
         <div className="grid grid-cols-1 gap-4">
             <div className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center">
                     <div className="flex flex-col gap-3">
                         <div>
                             <h1 className="text-2xl font-semibold tracking-tight">Editor</h1>
@@ -277,14 +278,13 @@ export default function EditorPage() {
                                 href="/preview"
                                 target="_blank"
                                 rel="noreferrer"
-                                className="rounded-xl bg-white/15 px-6 py-2 text-xs hover:bg-white/20 transition"
+                                className="hidden md:block rounded-xl bg-white/15 px-6 py-2 text-xs hover:bg-white/20 transition"
                             >
                                 Open Portfolio (Preview)
                             </a>
-
                         </div>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex my-4 md:my-0 md:mt-2 gap-3">
                         <Link
                             href="/dashboard/publish"
                             className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm hover:bg-white/10 transition"
@@ -299,16 +299,25 @@ export default function EditorPage() {
                             Clear All
                         </button>
                     </div>
+                    <a
+                        href="/preview"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block md:hidden rounded-xl bg-white/15 px-6 py-2 text-sm hover:bg-white/20 transition"
+                    >
+                        Open Portfolio (Preview)
+                    </a>
                 </div>
 
                 <SectionCard
+                    isResume={true}
                     title="Resume"
                     subtitle="Paste resume text or upload a file. Click Extract to auto-fill sections."
                     right={
                         <div className="flex gap-4">
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-base hover:bg-white/10 transition"
+                                className={`${extracting ? "hidden" : ""} rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-base hover:bg-white/10 transition`}
                             >
                                 Upload Resume
                             </button>

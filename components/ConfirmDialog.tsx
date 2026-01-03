@@ -30,7 +30,7 @@ export default function ConfirmDialog({
                 onClick={onClose}
             />
 
-            <div className="relative w-full max-w-lg rounded-2xl bg-[#25262dc3] py-6 px-10">
+            <div className="relative w-[90%] md:w-full max-w-lg rounded-2xl bg-[#25262dc3] py-6 px-10">
                 <div className="text-lg font-semibold">{title}</div>
 
                 {description ? (

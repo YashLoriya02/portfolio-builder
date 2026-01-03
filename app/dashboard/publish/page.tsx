@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const STORAGE_KEY = "portfolio_builder:published_projects:v1";
 
@@ -109,11 +111,13 @@ function StatusBadge({ state }: { state?: string }) {
 }
 
 function SectionCard({
+    isRepo,
     title,
     subtitle,
     right,
     children,
 }: {
+    isRepo?: Boolean;
     title: string;
     subtitle?: string;
     right?: React.ReactNode;
@@ -121,7 +125,7 @@ function SectionCard({
 }) {
     return (
         <div className="rounded-3xl border border-white/10 bg-white/4 p-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className={`flex items-start justify-between gap-4 ${isRepo ? "flex-col md:flex-row" : ""}`}>
                 <div>
                     <div className="text-lg font-semibold">{title}</div>
                     {subtitle ? (
@@ -248,11 +252,12 @@ export default function PublishPage() {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<UiError | null>(null);
     const [step, setStep] = useState(0);
-    const stepTimer = useRef<number | null>(null);
-
     const [deployState, setDeployState] = useState<DeployUiState>({ phase: "idle" });
     const deployPoller = useRef<number | null>(null);
-    let projectName = "";
+    const stepTimer = useRef<number | null>(null);
+    const projectNameRef = useRef("");
+
+    const router = useRouter()
 
     function stopDeployPolling() {
         if (deployPoller.current) {
@@ -292,7 +297,7 @@ export default function PublishPage() {
 
         deployPoller.current = window.setInterval(async () => {
             try {
-                const res = await fetch(`/api/publish/deploy-status?id=${deploymentId}&projectName=${projectName}`, {
+                const res = await fetch(`/api/publish/deploy-status?id=${deploymentId}&projectName=${projectNameRef.current}`, {
                     method: "GET",
                     cache: "no-store",
                 });
@@ -350,6 +355,9 @@ export default function PublishPage() {
     }
 
     async function deployToVercel() {
+        const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+        if (isMobile()) scrollToBottom();
+
         if (!result?.ok) {
             setDeployState({
                 phase: "error",
@@ -376,13 +384,13 @@ export default function PublishPage() {
             const repoOwner = match[1];
             const repoNameFromUrl = match[2];
 
-            projectName = repoNameFromUrl.toLowerCase();
+            projectNameRef.current = repoNameFromUrl.toLowerCase();
 
             const res = await fetch("/api/publish/deploy", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    projectName,
+                    projectName: projectNameRef.current,
                     repoOwner,
                     repoName: repoNameFromUrl,
                     production: true,
@@ -484,14 +492,37 @@ export default function PublishPage() {
     }, [draft]);
 
     const canPublish = useMemo(() => {
-        // soft-gate: allow publish but warn if too low
         return Boolean(repoName.trim().length >= 2);
     }, [repoName]);
+
+    const scrollToBottom = () => {
+        const container = document.getElementById("dashboard-scroll");
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (container) {
+                    container.scrollTo({
+                        top: container.scrollHeight,
+                        behavior: "smooth",
+                    });
+                } else {
+                    window.scrollTo({
+                        top: document.body.scrollHeight,
+                        behavior: "smooth",
+                    });
+                }
+            });
+        });
+    };
+
 
     async function publish() {
         setLoading(true);
         setError(null);
         setResult(null);
+
+        const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+        if (isMobile()) scrollToBottom();
 
         startStepper();
 
@@ -541,14 +572,14 @@ export default function PublishPage() {
                 {/* Left: controls */}
                 <div className="space-y-4">
                     <SectionCard
+                        isRepo={true}
                         title="GitHub Repo"
                         subtitle="We'll generate a new repo in your GitHub account and inject your data."
                         right={
                             <button
                                 onClick={publish}
                                 disabled={loading || !canPublish}
-                                className="rounded-xl bg-white text-black px-4 py-2 text-sm hover:opacity-90 transition
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="rounded-xl bg-white text-black w-full md:w-auto px-10 md:px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? "Publishing…" : "Create Repo"}
                             </button>
@@ -600,43 +631,7 @@ export default function PublishPage() {
                                             <div className="mt-2 text-xs text-rose-200/70">{error.hint}</div>
                                         ) : null}
                                     </div>
-
-                                    <div className="text-xs text-rose-200/60">
-                                        {error.code ? `Error ${error.code}` : null}
-                                    </div>
                                 </div>
-
-                                {error.actions?.length ? (
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {error.actions.map((a, i) =>
-                                            a.href ? (
-                                                <a
-                                                    key={i}
-                                                    href={a.href}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 transition"
-                                                >
-                                                    {a.label}
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    key={i}
-                                                    onClick={a.onClick}
-                                                    className="rounded-xl bg-white text-black px-3 py-2 text-xs font-medium hover:opacity-90 transition"
-                                                >
-                                                    {a.label}
-                                                </button>
-                                            )
-                                        )}
-                                        <button
-                                            onClick={publish}
-                                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 transition"
-                                        >
-                                            Try again
-                                        </button>
-                                    </div>
-                                ) : null}
                             </div>
                         ) : null}
                     </SectionCard>
@@ -648,7 +643,7 @@ export default function PublishPage() {
                         >
                             <div className="rounded-2xl w-full mb-4 border border-white/10 bg-black/30 p-4">
                                 <div className="text-xs text-white/60 mb-2">GitHub Repository</div>
-                                <div className="w-full flex justify-between items-center">
+                                <div className="w-full gap-3 md:gap-0 flex-col md:flex-row flex justify-between md:items-center">
                                     <a
                                         className="underline text-white/90 hover:text-white"
                                         href={result.repo.url}
@@ -807,13 +802,14 @@ export default function PublishPage() {
 
                     {result?.ok ? (
                         <SectionCard
+                            isRepo={true}
                             title="Deploy to Vercel"
                             subtitle="We'll deploy your GitHub repo and give you a live URL here."
                             right={
                                 <button
                                     onClick={deployToVercel}
                                     disabled={deployState.phase === "deploying"}
-                                    className="rounded-xl bg-white text-black px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="rounded-xl bg-white text-black w-full md:w-auto px-10 md:px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {deployState.phase === "deploying" ? "Deploying…" : "Deploy now"}
                                 </button>
@@ -892,6 +888,13 @@ export default function PublishPage() {
                                                 >
                                                     Copy link
                                                 </button>
+                                                <Link
+                                                    href={"/dashboard/published"}
+                                                    onClick={() => copyToClipboard(deployState.url)}
+                                                    className="w-full flex justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                                                >
+                                                    Published Portfolios
+                                                </Link>
                                             </div>
                                         </div>
                                     ) : null}

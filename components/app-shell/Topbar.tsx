@@ -13,7 +13,7 @@ export default function Topbar() {
     const first = getFirstName(data?.user?.name);
 
     return (
-        <div className="sticky top-0 z-20 backdrop-blur-xl bg-black/40 border-b border-white/10">
+        <div className="sticky top-0 z-20 md:backdrop-blur-xl md:bg-black/40 md:border-b border-white/10">
             <div className="flex items-center justify-between px-6 py-4">
                 <div>
                     <div className="text-sm text-white/60">Welcome back</div>

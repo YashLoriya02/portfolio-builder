@@ -274,8 +274,8 @@ export default function PublishedPage() {
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/60">
-                                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
-                                    Coming soon: Redeploy • Custom domain • Analytics
+                                <span className="rounded-xl border border-white/10 bg-white/5 px-4 py-2">
+                                    Coming soon : <br /> Redeploy • Custom domain • Real Time Changes
                                 </span>
                             </div>
                         </div>

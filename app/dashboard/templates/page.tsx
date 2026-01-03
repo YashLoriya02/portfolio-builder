@@ -93,10 +93,10 @@ export default function TemplatesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-3 md:gap-0 md:flex-row justify-between md:items-center">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Templates</h1>
-                    <p className="mt-1 text-sm text-white/60">
+                    <p className="mt-1 ml-1 text-sm text-white/60">
                         Pick a style. You can switch anytime — content stays.
                     </p>
                 </div>
@@ -128,7 +128,7 @@ export default function TemplatesPage() {
 
                     <button
                         onClick={() => setPreview(selected)}
-                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                        className="hidden md:block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
                     >
                         Preview
                     </button>
@@ -166,7 +166,7 @@ export default function TemplatesPage() {
                             <div className="mt-5 flex gap-2">
                                 <button
                                     onClick={() => setPreview(t.id)}
-                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition"
+                                    className="hidden md:block flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 transition"
                                 >
                                     Preview
                                 </button>
