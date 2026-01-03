@@ -102,7 +102,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </nav>
             </div>
 
-            <div className="mt-auto p-4">
+            <div className="fixed bottom-0 left-0 w-70 p-4">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="text-sm font-medium">Quick tip</div>
                     <div className="mt-1 text-xs opacity-70">

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import type { PortfolioDraft } from "@/lib/draft";
+import { Project } from "@/models/Project";
+import { connectDB } from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
@@ -81,6 +83,45 @@ async function waitForRepoReady(token: string, owner: string, repo: string) {
     throw new Error("Template repo generation is taking too long. Please retry.");
 }
 
+const saveGithubProjectToDB = async (params: {
+    userId: string;
+    githubUrl: string;
+    githubOwner: string;
+    repoName: string;
+    cloudProvider: "vercel" | "netlify" | "";
+}) => {
+    const { userId, githubUrl, githubOwner, repoName, cloudProvider } = params;
+    const session = await getServerSession()
+
+    const email = (session as any)?.user?.email || "";
+
+    if (!userId) throw new Error("Missing userId in session (mongoUserId/user.id).");
+    if (!email) throw new Error("Missing user email in session. Make sure GitHub email scope is enabled.");
+
+    await connectDB();
+
+    const doc = await Project.findOneAndUpdate(
+        { userId, githubOwner, repoName },
+        {
+            $set: {
+                userId,
+                email: String(email).toLowerCase(),
+                githubOwner,
+                repoName,
+                githubUrl,
+                cloudProvider,
+            },
+            $setOnInsert: {
+                isDeployed: false,
+                deployUrl: "",
+            },
+        },
+        { upsert: true, new: true }
+    );
+
+    return doc;
+};
+
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -152,6 +193,14 @@ export async function POST(req: Request) {
         );
 
         const vercelImportUrl = `https://vercel.com/new/import?s=https://github.com/${owner}/${repoName}`;
+
+        await saveGithubProjectToDB({
+            userId: body.userId,
+            githubUrl: created.html_url,
+            githubOwner: owner,
+            repoName,
+            cloudProvider: "",
+        });
 
         return json({
             ok: true,

@@ -2,24 +2,9 @@
 
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-
-const stats = [
-  { label: "Profile completion", value: "12%", sub: "Add resume to auto-fill", pill: "Low" },
-  { label: "Templates picked", value: "0", sub: "Choose a style", pill: "Pending" },
-  { label: "Projects added", value: "0", sub: "Show your best work", pill: "Next" },
-  // { label: "Publish status", value: "Draft", sub: "Not live yet", pill: "Draft" },
-];
-
-const steps = [
-  { title: "Upload your resume", desc: "Auto-extract experience, skills & projects.", href: "/dashboard/editor" },
-  { title: "Pick a template", desc: "Choose a clean layout and preview instantly.", href: "/dashboard/templates" },
-  { title: "Publish your link", desc: "Go live and share it with recruiters.", href: "/dashboard/publish" },
-];
-
-const activity = [
-  { title: "Signed in with GitHub", time: "Just now" },
-];
+import { useEffect, useMemo, useState } from "react";
 
 function Pill({ text }: { text: string }) {
   return (
@@ -31,8 +16,65 @@ function Pill({ text }: { text: string }) {
 
 export default function DashboardPage() {
   const { draft } = useDraftAutosave();
+  const { data: session, status } = useSession();
+  const [count, setCount] = useState(0)
+
+  const completion = useMemo(() => {
+    let score = 0;
+    const p = draft.profile;
+    if (p.fullName) score += 10;
+    if (p.headline) score += 10;
+    if (p.summary) score += 15;
+    if (draft.experience.length) score += 20;
+    if (draft.projects.length) score += 20;
+    if (draft.skills.length) score += 15;
+    if (draft.education.length) score += 10;
+    return Math.min(100, score);
+  }, [draft]);
+
+  const stats = [
+    { label: "Profile completion", value: `${completion}%`, sub: "Add resume to auto-fill", pill: "Low" },
+    { label: "Templates picked", value: "4", sub: "Choose a style", pill: "Pending" },
+    { label: "Projects added", value: count, sub: "Show your best work", pill: "Next" },
+  ];
+
+  const steps = [
+    { title: "Upload your resume", desc: "Auto-extract experience, skills & projects.", href: "/dashboard/editor" },
+    { title: "Pick a template", desc: "Choose a clean layout and preview instantly.", href: "/dashboard/templates" },
+    { title: "Publish your link", desc: "Go live and share it with recruiters.", href: "/dashboard/publish" },
+  ];
 
   useDynamicTitle(draft.profile.fullName);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      const appJwt = (session as any)?.appJwt;
+      const mongoUserId = (session as any)?.mongoUserId;
+
+      if (appJwt) localStorage.setItem("pb_app_jwt", appJwt);
+      if (mongoUserId) localStorage.setItem("pb_user_id", mongoUserId);
+    }
+  }, [status, session]);
+
+  async function fetchProjects(): Promise<void> {
+    const userId = localStorage.getItem("pb_user_id");
+
+    try {
+      const res = await fetch(`/api/project/${userId}?count=true`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const pData = await res.json();
+      setCount(pData.totalCount)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   return (
     <div className="space-y-8">
@@ -53,8 +95,7 @@ export default function DashboardPage() {
           <div className="mt-5 flex flex-col sm:flex-row gap-3">
             <Link
               href="/dashboard/editor"
-              className="inline-flex items-center justify-center rounded-xl bg-white text-black px-4 py-2 font-medium
-                         hover:opacity-90 transition active:scale-[0.99]"
+              className="inline-flex items-center justify-center rounded-xl bg-white text-black px-4 py-2 font-medium hover:opacity-90 transition active:scale-[0.99]"
             >
               Start with Resume
             </Link>
@@ -85,8 +126,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 rounded-3xl border border-white/10 bg-white/4 p-6">
+      <div className="w-full md:w-[90%]">
+        <div className="w-full rounded-3xl border border-white/10 bg-white/4 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Next steps</h2>
             <span className="text-xs text-white/60">Finish these to publish</span>
@@ -110,28 +151,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-
-        {/* <div className="rounded-3xl border border-white/10 bg-white/4 p-6">
-          <h2 className="text-lg font-semibold">Activity</h2>
-          <div className="mt-4 space-y-3">
-            {activity.map((a, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4"
-              >
-                <div className="text-sm font-medium">{a.title}</div>
-                <div className="mt-1 text-xs text-white/60">{a.time}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
-            <div className="text-sm font-medium">Pro tip</div>
-            <div className="mt-1 text-xs text-white/70">
-              Add 2-3 strong projects with metrics. Recruiters skim — numbers pop.
-            </div>
-          </div>
-        </div> */}
       </div>
     </div>
   );
