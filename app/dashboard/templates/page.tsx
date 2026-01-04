@@ -187,12 +187,30 @@ export default function TemplatesPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setPreview(selected)}
-                        className="hidden md:block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
-                    >
-                        Preview
-                    </button>
+                    <div className="flex gap-3 flex-row-reverse">
+                        <a
+                            href="/preview"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hidden md:block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                        >
+                            Open in New Tab
+                        </a>
+                        <a
+                            href="/preview"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block md:hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                        >
+                            Open
+                        </a>
+                        <button
+                            onClick={() => setPreview(selected)}
+                            className="hidden md:block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                        >
+                            Preview
+                        </button>
+                    </div>
                 </div>
             </div>
 
