@@ -2,22 +2,63 @@
 
 import { useMemo, useState } from "react";
 import { useDraftAutosave } from "@/hooks/useDraftAutosave";
-import type { TemplateId } from "@/lib/draft";
+import type { TemplateId, ThemeMode } from "@/lib/draft";
 import TemplatePreview from "@/components/preview/TemplatePreview";
 import Link from "next/link";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
+import { Moon, Sun } from "lucide-react";
+import { templates } from "@/lib/constants";
 
-const templates: Array<{
-    id: TemplateId;
-    name: string;
-    desc: string;
-    tags: string[];
-}> = [
-        { id: "glass", name: "Glass", desc: "Modern dark glass UI. Product vibes.", tags: ["SaaS", "Dark", "Clean"] },
-        { id: "minimal", name: "Minimal", desc: "No noise. Pure typography.", tags: ["Simple", "Fast", "ATS-friendly"] },
-        { id: "neo", name: "Neo", desc: "Bold headings. Strong contrast.", tags: ["Impact", "Creator"] },
-        { id: "classic", name: "Classic", desc: "Traditional layout. Recruiter-friendly.", tags: ["Formal", "Safe"] },
-    ];
+function ThemeToggle({
+    value,
+    onChange,
+}: {
+    value: ThemeMode;
+    onChange: (v: ThemeMode) => void;
+}) {
+    const isDark = value === "dark";
+
+    return (
+        <div className="relative inline-flex items-center rounded-2xl border border-white/10 bg-white/5 p-1 backdrop-blur">
+            <div
+                className={[
+                    "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl bg-white transition-transform duration-300 ease-out",
+                    isDark ? "translate-x-0" : "translate-x-[calc(100%+4px)]",
+                ].join(" ")}
+            />
+
+            <button
+                type="button"
+                onClick={() => onChange("dark")}
+                className={[
+                    "relative z-10 flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl transition",
+                    isDark
+                        ? "text-black"
+                        : "text-white/70 hover:text-white hover:bg-white/10",
+                ].join(" ")}
+                aria-pressed={isDark}
+            >
+                <Moon className="h-5 w-5" />
+                <span className="hidden sm:inline">Dark</span>
+            </button>
+
+            <button
+                type="button"
+                onClick={() => onChange("light")}
+                className={[
+                    "relative z-10 flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl transition",
+                    !isDark
+                        ? "text-black"
+                        : "text-white/70 hover:text-white hover:bg-white/10",
+                ].join(" ")}
+                aria-pressed={!isDark}
+            >
+                <Sun className="h-5 w-5" />
+                <span className="hidden sm:inline">Light</span>
+            </button>
+        </div>
+    );
+}
 
 function Tag({ t }: { t: string }) {
     return (
@@ -40,10 +81,13 @@ function Modal({
 
     return (
         <div className="fixed inset-0 z-9999">
-            <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+            <div
+                className="absolute inset-0 backdrop-blur-sm bg-black/10"
+                onClick={onClose}
+            />
 
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-                <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-white/10 bg-black/80 backdrop-blur-xl">
+            <div className="absolute inset-0 flex items-center justify-center p-4 no-scrollbar">
+                <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden no-scrollbar overflow-y-auto rounded-3xl border border-white/25 bg-black/80 backdrop-blur-xl">
                     {children}
                 </div>
             </div>
@@ -66,7 +110,7 @@ function TemplateThumb({
                 <div className="absolute inset-0 bg-linear-to-b from-white/6 to-transparent" />
 
                 <div
-                    className="absolute rounded-2xl border p-2 border-white top-3 left-3 origin-top-left pointer-events-none select-none"
+                    className={`absolute rounded-2xl border p-2 ${draft.theme === "light" ? "border-black" : "border-white"} top-3 left-3 origin-top-left pointer-events-none select-none`}
                     style={{ transform: `scale(${scale})` }}
                 >
                     <div className="w-200">
@@ -80,7 +124,6 @@ function TemplateThumb({
     );
 }
 
-
 export default function TemplatesPage() {
     const { draft, setDraftSafe, clearDraftSafe } = useDraftAutosave();
     useDynamicTitle(draft.profile.fullName);
@@ -89,7 +132,13 @@ export default function TemplatesPage() {
 
     const selected = draft.templateId;
 
-    const selectedMeta = useMemo(() => templates.find((t) => t.id === selected), [selected]);
+    // NEW: theme
+    const theme = (draft as any).theme === "light" ? "light" : "dark";
+
+    const selectedMeta = useMemo(
+        () => templates.find((t) => t.id === selected),
+        [selected]
+    );
 
     return (
         <div className="space-y-6">
@@ -101,7 +150,12 @@ export default function TemplatesPage() {
                     </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap items-center">
+                    <ThemeToggle
+                        value={theme}
+                        onChange={(v) => setDraftSafe((p) => ({ ...p, theme: v }))}
+                    />
+
                     <Link
                         href="/dashboard/publish"
                         className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm hover:bg-white/10 transition"
@@ -121,9 +175,16 @@ export default function TemplatesPage() {
             <div className="rounded-3xl border border-white/10 bg-white/4 p-6">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <div className="text-sm text-white/60">Selected</div>
-                        <div className="mt-1 text-lg font-semibold">{selectedMeta?.name ?? selected}</div>
+                        <div className="text-lg font-normal text-white/60">
+                            Selected Template -
+                            <span className="font-semibold">{" "}{selectedMeta?.name ?? selected}</span>
+                        </div>
                         <div className="mt-1 text-sm text-white/70">{selectedMeta?.desc}</div>
+
+                        {/* NEW: small theme hint */}
+                        <div className="mt-2 text-xs text-white/50">
+                            Theme: <span className="text-white/70">{theme}</span>
+                        </div>
                     </div>
 
                     <button
@@ -161,7 +222,8 @@ export default function TemplatesPage() {
                                 ))}
                             </div>
 
-                            <TemplateThumb draft={draft} templateId={t.id} />
+                            {/* IMPORTANT: thumb must carry theme too */}
+                            <TemplateThumb draft={{ ...draft, theme }} templateId={t.id} />
 
                             <div className="mt-5 flex gap-2">
                                 <button
@@ -191,6 +253,9 @@ export default function TemplatesPage() {
                         <div className="text-lg font-semibold">
                             {preview ? templates.find((t) => t.id === preview)?.name : ""}
                         </div>
+                        <div className="mt-1 text-xs text-white/50">
+                            Theme: <span className="text-white/70">{theme}</span>
+                        </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -215,13 +280,15 @@ export default function TemplatesPage() {
                     </div>
                 </div>
 
-                <div className="p-6">
-                    <div className="rounded-3xl border border-white/10 bg-black/40 p-4">
-                        <TemplatePreview draft={{ ...draft, templateId: preview ?? draft.templateId }} />
+                <div className="py-3 px-6">
+                    <div className="rounded-3xl no-scrollbar border border-white/10 bg-black/40 px-4">
+                        {/* IMPORTANT: preview must carry theme too */}
+                        <TemplatePreview
+                            draft={{ ...draft, theme, templateId: preview ?? draft.templateId }}
+                        />
                     </div>
                 </div>
             </Modal>
-
         </div>
     );
 }

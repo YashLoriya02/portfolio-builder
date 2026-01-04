@@ -16,8 +16,11 @@ const fixUrl = (u: string) => {
 };
 
 export function normalizeDraft(draft: PortfolioDraft): PortfolioDraft {
+    const theme = draft.theme === "light" ? "light" : "dark";
+
     return {
         ...draft,
+        theme,
         profile: {
             ...draft.profile,
             website: fixUrl(draft.profile.website),

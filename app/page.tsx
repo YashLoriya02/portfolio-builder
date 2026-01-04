@@ -14,7 +14,6 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
-  console.log("Session: ", session)
   const isAuthed = Boolean(session);
 
   return (
@@ -117,7 +116,7 @@ export default async function HomePage() {
                 {
                   n: "02",
                   t: "Pick a template",
-                  d: "Minimal / Glass / Neo / Classic — all dark.",
+                  d: "Minimal / Glass / Neo / Classic / Terminal / Editorial / Aurora — all dark.",
                 },
                 {
                   n: "03",

@@ -8,12 +8,18 @@ import GlassTemplate from "@/app/dashboard/templates/glass/page";
 import { TemplateMinimal } from "@/app/dashboard/templates/minimal/page";
 import { TemplateNeo } from "@/app/dashboard/templates/neo/page";
 import { TemplateClassic } from "@/app/dashboard/templates/classic/page";
+import { TemplateEditorial } from "../dashboard/templates/editorial/page";
+import { TemplateAurora } from "../dashboard/templates/aurora/page";
+import { TemplateTerminal } from "../dashboard/templates/terminal/page";
 
 const map: Record<TemplateId, (props: { draft: PortfolioDraft }) => JSX.Element> = {
     minimal: TemplateMinimal,
     neo: TemplateNeo,
     classic: TemplateClassic,
     glass: GlassTemplate,
+    editorial: TemplateEditorial,
+    aurora: TemplateAurora,
+    terminal: TemplateTerminal,
 };
 
 export default function PortfolioClient() {

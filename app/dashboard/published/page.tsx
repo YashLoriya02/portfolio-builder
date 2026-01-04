@@ -12,78 +12,9 @@ import {
     Trash2,
     Check,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
-
-type PublishedProject = {
-    repoName: string;
-    githubUrl: string;
-    userId: string;
-    deployUrl: string;
-    isDeployed: Boolean;
-    createdAt: string;
-    deployedAt?: string;
-    cloudProvider?: string;
-};
-
-async function deleteProject(selected: string): Promise<void> {
-    const userId = localStorage.getItem("pb_user_id");
-
-    try {
-        await fetch(`/api/project/${userId}/${encodeURIComponent(selected)}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-        });
-    } catch (e) {
-        console.log(e)
-    }
-}
-
-function shortUrl(u: string) {
-    try {
-        const url = new URL(u.startsWith("http") ? u : `https://${u}`);
-        return `${url.host}${url.pathname}`.replace(/\/$/, "");
-    } catch {
-        return u;
-    }
-}
-
-function safeUrl(u: string) {
-    const raw = (u || "").trim();
-    if (!raw) return "";
-    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-    return `https://${raw}`;
-}
-
-function providerFromUrl(url: string) {
-    const u = safeUrl(url).toLowerCase();
-    if (u.includes("vercel.app")) return "Vercel";
-    if (u.includes("netlify.app")) return "Netlify";
-    return "Live";
-}
-
-function providerBadgeClass(provider: string) {
-    if (provider === "Vercel") return "border-white/10 bg-white/5 text-white/80";
-    if (provider === "Netlify") return "border-cyan-500/20 bg-cyan-500/10 text-cyan-200";
-    return "border-white/10 bg-white/5 text-white/70";
-}
-
-function timeAgo(iso: string) {
-    const t = new Date(iso).getTime();
-    const diff = Date.now() - t;
-
-    const sec = Math.floor(diff / 1000);
-    const min = Math.floor(sec / 60);
-    const hr = Math.floor(min / 60);
-    const day = Math.floor(hr / 24);
-
-    if (day > 0) return `${day}d ago`;
-    if (hr > 0) return `${hr}h ago`;
-    if (min > 0) return `${min}m ago`;
-    return "just now";
-}
-
-type SortMode = "newest" | "oldest" | "az" | "za";
+import { PublishedProject, SortMode } from "@/lib/draft";
+import { deleteProject, providerBadgeClass, providerFromUrl, safeUrl, shortUrl, timeAgo } from "./helpers";
 
 export default function PublishedPage() {
     const [items, setItems] = useState<PublishedProject[]>([]);
@@ -163,7 +94,6 @@ export default function PublishedPage() {
         toast.message("Opening links…", { description: "Opened up to 10 projects (live + repo)." });
     }
 
-    // Empty: no projects at all
     if (!items.length) {
         return (
             <div className="max-w-6xl mx-auto px-4 space-y-6">

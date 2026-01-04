@@ -1,7 +1,10 @@
-export type TemplateId = "minimal" | "glass" | "neo" | "classic";
+export type TemplateId = "minimal" | "glass" | "neo" | "classic" | "aurora" | "terminal" | 'editorial';
+
+export type ThemeMode = "dark" | "light";
 
 export type PortfolioDraft = {
     updatedAt: number;
+    theme?: ThemeMode;
     responsibilities: Array<string>,
     templateId: TemplateId;
     profile: {
@@ -40,10 +43,33 @@ export type PortfolioDraft = {
     }>;
 };
 
+export type SortMode = "newest" | "oldest" | "az" | "za";
+
+export type PublishedProject = {
+    repoName: string;
+    githubUrl: string;
+    userId: string;
+    deployUrl: string;
+    isDeployed: Boolean;
+    createdAt: string;
+    deployedAt?: string;
+    cloudProvider?: string;
+};
+
+export type UiError = {
+    title: string;
+    message: string;
+    code?: string | number;
+    hint?: string;
+    actions?: { label: string; onClick?: () => void; href?: string }[];
+    debug?: any;
+};
+
 export const DRAFT_KEY = "pb_draft_v1";
 
 export const defaultDraft: PortfolioDraft = {
     updatedAt: Date.now(),
+    theme: "dark",
     responsibilities: [],
     templateId: "glass",
     profile: {
@@ -76,7 +102,7 @@ export function loadDraft(): PortfolioDraft {
 }
 
 export function saveDraft(draft: PortfolioDraft) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, updatedAt: Date.now() }));
-  window.dispatchEvent(new Event("pb_draft_updated"));
+    if (typeof window === "undefined") return;
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, updatedAt: Date.now() }));
+    window.dispatchEvent(new Event("pb_draft_updated"));
 }
