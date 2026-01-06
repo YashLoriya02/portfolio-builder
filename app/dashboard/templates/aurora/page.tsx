@@ -207,7 +207,7 @@ export function TemplateAurora({ draft }: { draft: PortfolioDraft }) {
                                     </span>
                                 ) : null}
                                 <span className={ui.metaSep}>•</span>
-                                <span>Single-page portfolio</span>
+                                {/* <span>Single-page portfolio</span> */}
                             </div>
                         </div>
 

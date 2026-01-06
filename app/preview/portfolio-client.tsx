@@ -11,6 +11,11 @@ import { TemplateClassic } from "@/app/dashboard/templates/classic/page";
 import { TemplateEditorial } from "../dashboard/templates/editorial/page";
 import { TemplateAurora } from "../dashboard/templates/aurora/page";
 import { TemplateTerminal } from "../dashboard/templates/terminal/page";
+import { TemplateSpotlight } from "../dashboard/templates/spotlight/page";
+import { TemplateTimeline } from "../dashboard/templates/timeline/page";
+import { TemplateMuse } from "../dashboard/templates/muse/page";
+import { TemplateOrbit } from "../dashboard/templates/orbit/page";
+import { TemplatePaper } from "../dashboard/templates/paper/page";
 
 const map: Record<TemplateId, (props: { draft: PortfolioDraft }) => JSX.Element> = {
     minimal: TemplateMinimal,
@@ -20,6 +25,11 @@ const map: Record<TemplateId, (props: { draft: PortfolioDraft }) => JSX.Element>
     editorial: TemplateEditorial,
     aurora: TemplateAurora,
     terminal: TemplateTerminal,
+    spotlight: TemplateSpotlight,
+    muse: TemplateMuse,
+    paper: TemplatePaper,
+    timeline: TemplateTimeline,
+    orbit: TemplateOrbit,
 };
 
 export default function PortfolioClient() {

@@ -1,4 +1,4 @@
-export type TemplateId = "minimal" | "glass" | "neo" | "classic" | "aurora" | "terminal" | 'editorial';
+export type TemplateId = "minimal" | "glass" | "neo" | "classic" | "aurora" | "terminal" | 'editorial' | "spotlight" | "timeline" | "muse" | "orbit" | "paper";
 
 export type ThemeMode = "dark" | "light";
 

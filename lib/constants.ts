@@ -19,10 +19,40 @@ export const templates: Array<{
             tags: ["Premium", "Dark", "Interactive"],
         },
         {
+            id: "paper",
+            name: "Paper",
+            desc: "Ultra-clean, editorial layout. Minimal, ATS-friendly, and content focused.",
+            tags: ["Minimal", "ATS-friendly", "Clean"],
+        },
+        {
+            id: "timeline",
+            name: "Timeline",
+            desc: "Career journey laid out as a story. Experience-first, clear, and highly readable.",
+            tags: ["Storytelling", "Experience", "Chronological", "Clean"],
+        },
+        {
             id: "minimal",
             name: "Minimal",
             desc: "No noise. Pure typography.",
             tags: ["Simple", "Fast", "ATS-friendly"],
+        },
+        {
+            id: "orbit",
+            name: "Orbit",
+            desc: "High-wow visual layout with sections revolving around your core work.",
+            tags: ["Interactive", "Unique", "Founder", "Showcase"],
+        },
+        {
+            id: "neo",
+            name: "Neo",
+            desc: "Bold headings. Strong contrast.",
+            tags: ["Impact", "Creator", "Modern"],
+        },
+        {
+            id: "spotlight",
+            name: "Spotlight",
+            desc: "Big hero, featured projects, and bold storytelling. Built to impress at first glance.",
+            tags: ["Premium", "Founder", "High Impact", "Modern"],
         },
         {
             id: "editorial",
@@ -43,10 +73,10 @@ export const templates: Array<{
             tags: ["SaaS", "Dark", "Clean"],
         },
         {
-            id: "neo",
-            name: "Neo",
-            desc: "Bold headings. Strong contrast.",
-            tags: ["Impact", "Creator", "Modern"],
+            id: "muse",
+            name: "Muse",
+            desc: "Aesthetic, magazine-style layout for creatives who care about craft and design.",
+            tags: ["Creative", "Aesthetic", "Designer", "Premium"],
         },
     ];
 

@@ -26,10 +26,18 @@ body {
 }
 
 
-html{
+html {
   scroll-behavior: smooth;
 }
 
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;
+}
+
+.bxsd {
+  box-shadow: 0px 0px 25px 5px #a5a5e638 ;
+}
+
+.bxsd-light {
+  box-shadow: 0px 0px 25px 5px #0202532e ;
 }

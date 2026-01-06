@@ -6,7 +6,7 @@ import type { TemplateId, ThemeMode } from "@/lib/draft";
 import TemplatePreview from "@/components/preview/TemplatePreview";
 import Link from "next/link";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Search, X } from "lucide-react";
 import { templates } from "@/lib/constants";
 
 function ThemeToggle({
@@ -26,15 +26,12 @@ function ThemeToggle({
                     isDark ? "translate-x-0" : "translate-x-[calc(100%+4px)]",
                 ].join(" ")}
             />
-
             <button
                 type="button"
                 onClick={() => onChange("dark")}
                 className={[
                     "relative z-10 flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl transition",
-                    isDark
-                        ? "text-black"
-                        : "text-white/70 hover:text-white hover:bg-white/10",
+                    isDark ? "text-black" : "text-white/70 hover:text-white hover:bg-white/10",
                 ].join(" ")}
                 aria-pressed={isDark}
             >
@@ -47,9 +44,7 @@ function ThemeToggle({
                 onClick={() => onChange("light")}
                 className={[
                     "relative z-10 flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl transition",
-                    !isDark
-                        ? "text-black"
-                        : "text-white/70 hover:text-white hover:bg-white/10",
+                    !isDark ? "text-black" : "text-white/70 hover:text-white hover:bg-white/10",
                 ].join(" ")}
                 aria-pressed={!isDark}
             >
@@ -68,6 +63,32 @@ function Tag({ t }: { t: string }) {
     );
 }
 
+function FilterPill({
+    label,
+    active,
+    onClick,
+}: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={[
+                "text-xs cursor-pointer rounded-full border px-3 py-1.5 transition",
+                active
+                    ? "border-white/20 bg-white text-black"
+                    : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white",
+            ].join(" ")}
+            aria-pressed={active}
+        >
+            {label}
+        </button>
+    );
+}
+
 function Modal({
     open,
     onClose,
@@ -81,11 +102,7 @@ function Modal({
 
     return (
         <div className="fixed inset-0 z-9999">
-            <div
-                className="absolute inset-0 backdrop-blur-sm bg-black/10"
-                onClick={onClose}
-            />
-
+            <div className="absolute inset-0 backdrop-blur-sm bg-black/10" onClick={onClose} />
             <div className="absolute inset-0 flex items-center justify-center p-4 no-scrollbar">
                 <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden no-scrollbar overflow-y-auto rounded-3xl border border-white/25 bg-black/80 backdrop-blur-xl">
                     {children}
@@ -95,13 +112,7 @@ function Modal({
     );
 }
 
-function TemplateThumb({
-    draft,
-    templateId,
-}: {
-    draft: any;
-    templateId: TemplateId;
-}) {
+function TemplateThumb({ draft, templateId }: { draft: any; templateId: TemplateId }) {
     const scale = 0.38;
 
     return (
@@ -110,7 +121,8 @@ function TemplateThumb({
                 <div className="absolute inset-0 bg-linear-to-b from-white/6 to-transparent" />
 
                 <div
-                    className={`absolute rounded-2xl border p-2 ${draft.theme === "light" ? "border-black" : "border-white"} top-3 left-3 origin-top-left pointer-events-none select-none`}
+                    className={`absolute rounded-2xl border p-2 ${draft.theme === "light" ? "border-black" : "border-white"
+                        } top-3 left-3 origin-top-left pointer-events-none select-none`}
                     style={{ transform: `scale(${scale})` }}
                 >
                     <div className="w-200">
@@ -130,15 +142,74 @@ export default function TemplatesPage() {
 
     const [preview, setPreview] = useState<TemplateId | null>(null);
 
-    const selected = draft.templateId;
+    // Search + multi-select filters
+    const [q, setQ] = useState("");
+    const [activeTags, setActiveTags] = useState<string[]>(["All"]);
 
-    // NEW: theme
+    const selected = draft.templateId;
     const theme = (draft as any).theme === "light" ? "light" : "dark";
 
     const selectedMeta = useMemo(
         () => templates.find((t) => t.id === selected),
         [selected]
     );
+
+    const allTags = useMemo(() => {
+        const s = new Set<string>();
+        templates.forEach((t) => t.tags.forEach((x) => s.add(x)));
+        return ["All", ...Array.from(s).sort((a, b) => a.localeCompare(b))];
+    }, []);
+
+    function toggleTag(tag: string) {
+        setActiveTags((prev) => {
+            // "All" is sticky. Clicking it resets to only All.
+            if (tag === "All") return ["All"];
+
+            // Remove All once user selects a specific tag
+            const base = prev.includes("All") ? prev.filter((x) => x !== "All") : prev;
+
+            // Toggle off if already selected
+            if (base.includes(tag)) {
+                const next = base.filter((x) => x !== tag);
+                // If none left, fall back to All
+                return next.length ? next : ["All"];
+            }
+
+            // Toggle on
+            return [...base, tag];
+        });
+    }
+
+    function isTagActive(tag: string) {
+        if (activeTags.includes("All")) return tag === "All";
+        return activeTags.includes(tag);
+    }
+
+    function resetFilters() {
+        setActiveTags(["All"]);
+        setQ("");
+    }
+
+    const filteredTemplates = useMemo(() => {
+        const query = q.trim().toLowerCase();
+
+        const matchesAnySelectedTag = (t: (typeof templates)[number]) => {
+            if (activeTags.includes("All")) return true;
+            // OR logic: match if template contains ANY selected tag
+            return activeTags.some((tag) => t.tags.includes(tag));
+        };
+
+        return templates.filter((t) => {
+            if (!matchesAnySelectedTag(t)) return false;
+
+            if (!query) return true;
+
+            const hay = [t.name, t.id, t.desc, ...(t.tags || [])].join(" ").toLowerCase();
+            return hay.includes(query);
+        });
+    }, [q, activeTags]);
+
+    const isFiltered = q.trim().length > 0 || !activeTags.includes("All");
 
     return (
         <div className="space-y-6">
@@ -151,10 +222,7 @@ export default function TemplatesPage() {
                 </div>
 
                 <div className="flex gap-3 flex-wrap items-center">
-                    <ThemeToggle
-                        value={theme}
-                        onChange={(v) => setDraftSafe((p) => ({ ...p, theme: v }))}
-                    />
+                    <ThemeToggle value={theme} onChange={(v) => setDraftSafe((p) => ({ ...p, theme: v }))} />
 
                     <Link
                         href="/dashboard/publish"
@@ -172,19 +240,15 @@ export default function TemplatesPage() {
                 </div>
             </div>
 
+            {/* Selected template card */}
             <div className="rounded-3xl border border-white/10 bg-white/4 p-6">
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <div className="text-lg font-normal text-white/60">
                             Selected Template -
-                            <span className="font-semibold">{" "}{selectedMeta?.name ?? selected}</span>
+                            <span className="font-semibold"> {selectedMeta?.name ?? selected}</span>
                         </div>
                         <div className="mt-1 text-sm text-white/70">{selectedMeta?.desc}</div>
-
-                        {/* NEW: small theme hint */}
-                        <div className="mt-2 text-xs text-white/50">
-                            Theme: <span className="text-white/70">{theme}</span>
-                        </div>
                     </div>
 
                     <div className="flex gap-3 flex-row-reverse">
@@ -214,9 +278,66 @@ export default function TemplatesPage() {
                 </div>
             </div>
 
+            {/* Search + Filters */}
+            <div className="rounded-3xl border border-white/10 bg-white/4 p-5">
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/45" />
+                            <input
+                                value={q}
+                                onChange={(e) => setQ(e.target.value)}
+                                placeholder="Search templates by name, vibe, tag..."
+                                className="w-full rounded-2xl border border-white/10 bg-black/30 px-10 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/15"
+                            />
+                            {q ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setQ("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 hover:bg-white/10 transition"
+                                    aria-label="Clear search"
+                                >
+                                    <X className="h-4 w-4 text-white/55" />
+                                </button>
+                            ) : null}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <div className="text-xs text-white/60">
+                                Showing <span className="text-white/80">{filteredTemplates.length}</span> of{" "}
+                                <span className="text-white/80">{templates.length}</span>
+                            </div>
+
+                            {isFiltered ? (
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10 transition"
+                                >
+                                    Reset
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {allTags.map((t) => (
+                            <FilterPill
+                                key={t}
+                                label={t}
+                                active={isTagActive(t)}
+                                onClick={() => toggleTag(t)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Templates grid (filtered) */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {templates.map((t) => {
+                {filteredTemplates.map((t) => {
                     const isSelected = t.id === selected;
+
                     return (
                         <div
                             key={t.id}
@@ -240,7 +361,6 @@ export default function TemplatesPage() {
                                 ))}
                             </div>
 
-                            {/* IMPORTANT: thumb must carry theme too */}
                             <TemplateThumb draft={{ ...draft, theme }} templateId={t.id} />
 
                             <div className="mt-5 flex gap-2">
@@ -264,6 +384,26 @@ export default function TemplatesPage() {
                 })}
             </div>
 
+            {/* Empty state */}
+            {filteredTemplates.length === 0 ? (
+                <div className="rounded-3xl border border-white/10 bg-white/4 p-10 text-center">
+                    <div className="text-lg font-semibold">No templates found</div>
+                    <div className="mt-2 text-sm text-white/65">
+                        Try a different keyword or remove filters.
+                    </div>
+                    <div className="mt-5">
+                        <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+                        >
+                            Reset filters
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
+            {/* Preview modal */}
             <Modal open={preview !== null} onClose={() => setPreview(null)}>
                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                     <div>
@@ -300,7 +440,6 @@ export default function TemplatesPage() {
 
                 <div className="py-3 px-6">
                     <div className="rounded-3xl no-scrollbar border border-white/10 bg-black/40 px-4">
-                        {/* IMPORTANT: preview must carry theme too */}
                         <TemplatePreview
                             draft={{ ...draft, theme, templateId: preview ?? draft.templateId }}
                         />
